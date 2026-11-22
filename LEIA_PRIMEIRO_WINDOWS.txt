@@ -1,0 +1,9 @@
+ENGLISHCENTRAL STUDIO — WINDOWS CHROME BRIDGE
+
+1. Extraia este pacote inteiro.
+2. Instale Python 3.10+ com Add Python to PATH.
+3. Entre no EnglishCentral no Chrome e habilite chrome://inspect/#remote-debugging.
+4. Execute windows\INICIAR_PC.bat e deixe a janela aberta.
+5. Abra https://englishcentral-studio.onrender.com, clique em Já estou conectado no Chrome e autorize.
+
+Leia windows/GUIA_PC_BRIDGE.md para o passo a passo. A conexão CDP e a automação são reais; se o Chrome não anexar, o painel mostra o erro de conexão em vez de simular sucesso.

@@ -3,64 +3,75 @@ chcp 65001 >nul
 setlocal
 cd /d "%~dp0\.."
 title EnglishCentral Studio - Conector real do Chrome (Windows)
-set "REPO_ROOT=%CD%"
-set "RUNTIME=%REPO_ROOT%\runtime"
+set "ROOT=%CD%"
+set "RUNTIME=%ROOT%\runtime"
 set "APP=%RUNTIME%\EnglishCentral-Studio"
-set "ARCHIVE=%REPO_ROOT%\EnglishCentral-Studio-18.13.3-G0DMOD3.zip"
+set "SOURCE_ZIP=%ROOT%\EnglishCentral-Studio-18.13.3-G0DMOD3.zip"
 
 echo.
 echo ============================================================
-echo   ENGLISHCENTRAL STUDIO - CONECTOR REAL DO CHROME NO WINDOWS
+echo   ENGLISHCENTRAL STUDIO - CHROME REAL DO WINDOWS
 echo ============================================================
 echo.
-if not exist "%ARCHIVE%" (
-  echo ERRO: nao encontrei o arquivo original EnglishCentral Studio.
-  echo Extraia o ZIP completo do repositorio antes de executar este BAT.
+if not exist "%SOURCE_ZIP%" (
+  echo ERRO: o arquivo original EnglishCentral-Studio-18.13.3-G0DMOD3.zip nao foi encontrado.
+  echo Extraia o pacote completo antes de executar este arquivo.
   pause
   exit /b 1
 )
+
+py -3 --version >nul 2>&1
+if errorlevel 1 (
+  echo Python 3 nao foi encontrado.
+  echo Instale Python 3.10 ou superior em https://www.python.org/downloads/windows/
+  echo Durante a instalacao, marque "Add Python to PATH" e instale o Python Launcher.
+  pause
+  exit /b 1
+)
+
 if not exist "%APP%\servidor.py" (
-  echo Extraindo o codigo original V18.13.3...
+  echo [1/3] Extraindo o projeto original V18.13.3...
   if not exist "%RUNTIME%" mkdir "%RUNTIME%"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%ARCHIVE%' -DestinationPath '%RUNTIME%' -Force"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%SOURCE_ZIP%' -DestinationPath '%RUNTIME%' -Force"
   if errorlevel 1 (
     echo Falha ao extrair o projeto original.
     pause
     exit /b 1
   )
 )
-py -3 --version >nul 2>&1
+
+echo [2/3] Aplicando e validando a ponte local...
+py -3 "%ROOT%\install_windows_bridge.py" "%APP%"
 if errorlevel 1 (
-  echo Python 3.10 ou superior nao foi encontrado.
-  echo Instale em https://www.python.org/downloads/windows/ e marque Add Python to PATH.
+  echo.
+  echo ERRO: a ponte nao foi aplicada. Nenhuma conexao simulada sera usada.
   pause
   exit /b 1
 )
-echo Aplicando a ponte local ao codigo original...
-py -3 "%REPO_ROOT%\windows\apply_pc_bridge.py" "%APP%"
-if errorlevel 1 (
-  echo A atualizacao da ponte falhou. Nenhuma simulacao sera usada.
-  pause
-  exit /b 1
-)
+
 cd /d "%APP%"
 set "EC_FORCE_DESKTOP=1"
 set "EC_PC_BRIDGE=1"
 set "EC_LOCAL_PANEL_ORIGIN=https://englishcentral-studio.onrender.com"
 set "EC_PORT=8765"
 set "EC_REMOTE_MODE="
+set "EC_PUBLIC_URL="
 set "EC_PUBLIC_SESSIONS="
-set "EC_PUBLIC_SESSION_ID="
+set "EC_PUBLIC_SESSION_SECRET="
 set "EC_PANEL_TOKEN="
+set "EC_TERMUX="
+set "EC_TRUSTED_PROXY_IPS="
+
 echo.
-echo Conector local iniciando em 127.0.0.1:8765.
-echo O login e os cookies permanecem neste computador.
-echo Mantenha esta janela aberta enquanto a automacao estiver ativa.
+echo [3/3] Iniciando o servidor local que controla o Chrome existente...
+echo Endereco local: http://127.0.0.1:8765
+echo Cookies e login permanecem no Chrome deste computador.
+echo Mantenha esta janela aberta enquanto utilizar a automacao.
 echo.
 py -3 iniciar.py
 if errorlevel 1 (
   echo.
-  echo O conector encerrou com erro. Confira a mensagem acima.
+  echo O conector terminou com erro. Veja a mensagem acima.
   pause
 )
 endlocal

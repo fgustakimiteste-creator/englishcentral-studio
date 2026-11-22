@@ -2,50 +2,30 @@ FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
     EC_DATA_DIR=/tmp/ec-data \
-    EC_PROFILES_ROOT=/tmp/ec-data \
-    EC_HEADLESS=1 \
-    EC_REMOTE_MODE=1 \
-    EC_PUBLIC_SESSIONS=1 \
-    EC_PUBLIC_MAX_SESSIONS=3 \
-    EC_PUBLIC_URL=https://englishcentral-studio.onrender.com
+    EC_PROFILES_ROOT=/tmp/ec-data
 
 WORKDIR /tmp/build
 RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Build from the complete original V18.13.3 archive. No feature-reduced source tree.
+# Preserve and serve the exact full original V18.13.3 project.
 COPY EnglishCentral-Studio-18.13.3-G0DMOD3.zip /tmp/englishcentral.zip
 RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
     && cp -a /tmp/unpacked/EnglishCentral-Studio/. /app/ \
     && rm -rf /tmp/unpacked /tmp/englishcentral.zip
 
-# Server-side isolation for each public visitor.
-COPY install_public_gateway.py /tmp/install_public_gateway.py
-# The real Chrome bridge runs on the visitor's Windows PC.
-COPY enable_pc_bridge_cloud.py /tmp/enable_pc_bridge_cloud.py
-COPY fix_pc_bridge_dialog.py /tmp/fix_pc_bridge_dialog.py
-COPY install_pc_download_link.py /tmp/install_pc_download_link.py
-# Correct the Python Playwright CDP signature before publishing the UI.
-COPY fix_playwright_cdp.py /tmp/fix_playwright_cdp.py
-RUN EC_SOURCE_ROOT=/app python /tmp/install_public_gateway.py \
-    && EC_SOURCE_ROOT=/app python /tmp/fix_playwright_cdp.py \
-    && EC_SOURCE_ROOT=/app python /tmp/enable_pc_bridge_cloud.py \
-    && python /tmp/fix_pc_bridge_dialog.py \
-    && python /tmp/install_pc_download_link.py \
-    && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py
+# Install only the Windows-to-local-Chrome connector. No fake cloud browser/session.
+COPY install_windows_bridge.py /tmp/install_windows_bridge.py
+RUN EC_SOURCE_ROOT=/app python /tmp/install_windows_bridge.py \
+    && python -m py_compile /app/servidor.py /app/mobile_app.py /app/iniciar.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \
-    && python -m playwright install --with-deps chromium \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends espeak-ng xvfb xauth \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 10001 ecstudio \
     && mkdir -p /tmp/ec-data \
+    && useradd --create-home --uid 10001 ecstudio \
     && chown -R ecstudio:ecstudio /tmp/ec-data
 
 USER 10001:10001
-EXPOSE 8765
-CMD ["sh", "-c", "exec python servidor.py --host 0.0.0.0 --port ${PORT:-8765}"]
+EXPOSE 10000
+CMD ["sh", "-c", "exec python servidor.py --host 0.0.0.0 --port ${PORT:-10000}"]

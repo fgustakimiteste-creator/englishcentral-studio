@@ -5,23 +5,26 @@ ENV PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers \
     EC_DATA_DIR=/tmp/ec-data \
     EC_PROFILES_ROOT=/tmp/ec-data \
-    EC_HEADLESS=1
+    EC_HEADLESS=1 \
+    EC_REMOTE_MODE=1 \
+    EC_PUBLIC_SESSIONS=1 \
+    EC_PUBLIC_MAX_SESSIONS=3 \
+    EC_PUBLIC_URL=https://englishcentral-studio.onrender.com
 
 WORKDIR /tmp/build
 RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Build from the complete original V18.13.3 archive. No feature-reduced source tree.
 COPY EnglishCentral-Studio-18.13.3-G0DMOD3.zip /tmp/englishcentral.zip
 RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
     && cp -a /tmp/unpacked/EnglishCentral-Studio/. /app/ \
     && rm -rf /tmp/unpacked /tmp/englishcentral.zip
 
-COPY enable_public_sessions.py /tmp/enable_public_sessions.py
-COPY fix_public_ui.py /tmp/fix_public_ui.py
-COPY fix_public_home.py /tmp/fix_public_home.py
-COPY fix_request_import.py /tmp/fix_request_import.py
-COPY debug_public_auth.py /tmp/debug_public_auth.py
-RUN python /tmp/enable_public_sessions.py && python /tmp/fix_public_ui.py && python /tmp/fix_public_home.py && python /tmp/fix_request_import.py && python /tmp/debug_public_auth.py
+# Only the public-session gateway is layered on top of the original application.
+COPY install_public_gateway.py /tmp/install_public_gateway.py
+RUN EC_SOURCE_ROOT=/app python /tmp/install_public_gateway.py \
+    && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \

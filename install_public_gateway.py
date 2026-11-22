@@ -275,36 +275,3 @@ replace_once('web/index.html',
 ''',
 '''if(!publicSession&&location.hash.startsWith('#token=')){try{token=decodeURIComponent(location.hash.substring(7));storeAccess();history.replaceState(null,'',location.pathname+location.search)}catch{}}
 ''')
-# Robustly preserve the original Chrome action in the public Render UI.
-page = ROOT / 'web' / 'index.html'
-html = page.read_text(encoding='utf-8')
-hidden_line = "for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=remoteMode;"
-visible_line = "for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=false;"
-if hidden_line not in html:
-    raise SystemExit('Could not locate the Chrome action visibility rule in web/index.html')
-html = html.replace(hidden_line, visible_line, 1)
-lines = html.splitlines(keepends=True)
-for index, line in enumerate(lines):
-    if "text('browserSessionHelp',remoteMode?" in line:
-        indent = line[:len(line) - len(line.lstrip())]
-        lines[index] = indent + "text('browserSessionHelp',remoteMode?'O navegador remoto é separado do Chrome deste aparelho. Para usar a aba já conectada no Chrome, é necessária uma ponte local com o Studio executando no mesmo dispositivo; o Render não acessa o Chrome/localhost de outro aparelho. A opção permanece visível, sem substituir sua sessão.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');\n"
-        break
-else:
-    raise SystemExit('Could not locate the browser session help line in web/index.html')
-page.write_text(''.join(lines), encoding='utf-8')
-replace_once('web/index.html',
-''' text('browserSessionHelp',remoteMode?'Entre na conta pela prévia do servidor. Para outra conta, selecione a pessoa correspondente. O login do Chrome do celular é separado.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');
-''',
-''' text('browserSessionHelp',remoteMode?'O navegador remoto é separado do Chrome deste aparelho. Para usar a aba já conectada no Chrome, é necessária uma ponte local com o Studio executando no mesmo dispositivo; o Render não acessa o Chrome/localhost de outro aparelho. A opção permanece visível, sem substituir sua sessão.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');
-''')
-replace_once('web/index.html',
-'''  const sameOrigin=target.origin===location.origin&&/^\\/p\\/(principal|pessoa(?:[2-9]|[1-9]\\d+))\\/$/.test(target.pathname)&&target.hash.startsWith('#token=')&&!target.search;
-''',
-'''  const sameOrigin=target.origin===location.origin&&/^\\/p\\/(principal|pessoa(?:[2-9]|[1-9]\\d+))\\/$/.test(target.pathname)&&!target.search&&(publicSession?!target.hash:target.hash.startsWith('#token='));
-''')
-replace_once('web/index.html',
-''' if(!target.hash.startsWith('#token='))throw Error('A sessão não forneceu uma credencial de painel válida.');
-''',
-''' if(publicSession){if(target.hash)throw Error('A sessão pública não deve expor credenciais na URL.')}else if(!target.hash.startsWith('#token='))throw Error('A sessão não forneceu uma credencial de painel válida.');
-''')
-

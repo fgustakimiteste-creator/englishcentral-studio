@@ -296,3 +296,18 @@ replace_once('web/index.html',
 ''',
 ''' if(publicSession){if(target.hash)throw Error('A sessão pública não deve expor credenciais na URL.')}else if(!target.hash.startsWith('#token='))throw Error('A sessão não forneceu uma credencial de painel válida.');
 ''')
+
+
+# Keep the original "Usar meu Chrome já aberto" action visible in the cloud UI.
+# The endpoint still explains that a local bridge is required to attach to a device's Chrome.
+replace_once('web/index.html',
+''' for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=remoteMode;
+''',
+''' // The connect-to-local-Chrome action remains visible in Render and Edge.
+ for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=false;
+''')
+replace_once('web/index.html',
+''' text('browserSessionHelp',remoteMode?'Entre na conta pela prévia do servidor. Para outra conta, selecione a pessoa correspondente. O login do Chrome do celular é separado.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');
+''',
+''' text('browserSessionHelp',remoteMode?'O navegador remoto é separado do Chrome deste aparelho. Para usar a aba já conectada no Chrome, é necessária uma ponte local com o Studio executando no mesmo dispositivo; o Render não acessa o Chrome/localhost de outro aparelho. A opção permanece visível, sem substituir sua sessão.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');
+''')

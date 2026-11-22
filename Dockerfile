@@ -25,8 +25,10 @@ RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
 COPY install_public_gateway.py /tmp/install_public_gateway.py
 # Browser-side bridge: hosted UI uses the local Windows connector only after explicit approval.
 COPY enable_pc_bridge_cloud.py /tmp/enable_pc_bridge_cloud.py
+COPY install_pc_download_link.py /tmp/install_pc_download_link.py
 RUN EC_SOURCE_ROOT=/app python /tmp/install_public_gateway.py \
     && EC_SOURCE_ROOT=/app python /tmp/enable_pc_bridge_cloud.py \
+    && python /tmp/install_pc_download_link.py \
     && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py
 
 WORKDIR /app

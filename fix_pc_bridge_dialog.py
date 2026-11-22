@@ -48,14 +48,18 @@ s = s[:start] + new_show + s[end:]
 form_start = s.find("$('browserConnectForm').onsubmit=async event=>{")
 if form_start < 0:
     raise SystemExit('Manipulador do formulário de conexão não encontrado.')
-expected = " event.preventDefault();if(remoteMode&&!localBridgeActive){try{await connectLocalPCBridge()}catch(error){text('browserConnectMessage',error.message||String(error));return}}if(!$('browserConsent').checked)return;"
-replacement = """ event.preventDefault();
+form_end = s.find("const raw=$('chromePort').value.trim()", form_start)
+if form_end < 0:
+    raise SystemExit('Início do processamento da porta no formulário não encontrado.')
+prefix = s[form_start:form_end]
+replacement = """$('browserConnectForm').onsubmit=async event=>{
+ event.preventDefault();
  if(!$('browserConsent').checked)return;
- if(remoteMode&&!localBridgeActive){text('browserConnectMessage','Conectando ao serviço local deste PC…');$('submitBrowserConnect').disabled=true;try{await connectLocalPCBridge()}catch(error){text('browserConnectMessage',error.message||String(error));$('submitBrowserConnect').disabled=false;return}}"""
-if expected in s:
-    s = s.replace(expected, replacement, 1)
-elif replacement not in s:
-    raise SystemExit('Não encontrei a sequência de consentimento/conexão esperada no formulário.')
+ if(remoteMode&&!localBridgeActive){text('browserConnectMessage','Conectando ao serviço local deste PC…');$('submitBrowserConnect').disabled=true;try{await connectLocalPCBridge()}catch(error){text('browserConnectMessage',error.message||String(error));$('submitBrowserConnect').disabled=false;return}}
+ """
+if "if(!$('browserConsent').checked)return;" not in prefix or "connectLocalPCBridge()" not in prefix:
+    raise SystemExit('O formulário não contém o consentimento e o bootstrap da ponte esperados.')
+s = s[:form_start] + replacement + s[form_end:]
 
 if "const localBridgeBase='http://127.0.0.1:8765/';" not in s:
     raise SystemExit('Ponte local não encontrada no painel.')

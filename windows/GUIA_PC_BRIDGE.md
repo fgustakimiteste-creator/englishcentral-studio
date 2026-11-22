@@ -1,29 +1,35 @@
 # Conectar o Chrome do Windows ao EnglishCentral Studio hospedado
 
-Este pacote mantém o projeto V18.13.3 original e acrescenta uma ponte local real. O Render não tenta acessar localhost do seu computador: o navegador abre uma conexão local com o conector Windows, e o servidor do próprio PC conecta o Playwright ao Chrome já aberto.
+Este pacote mantém o projeto V18.13.3 original e acrescenta uma ponte local real. O Render não tenta acessar o Chrome do computador: o painel HTTPS conversa com o servidor local em \`127.0.0.1:8765\`, e esse servidor usa Playwright CDP para anexar ao Chrome já aberto.
 
-## Instalação
+## Pré-requisitos
 
-1. Baixe o ZIP completo do repositório e extraia tudo para uma pasta do Windows.
-2. Instale Python 3.10 ou superior em https://www.python.org/downloads/windows/ e marque **Add Python to PATH**.
-3. No Chrome do PC, abra `chrome://inspect/#remote-debugging` e habilite **Allow remote debugging for this browser instance**. O modo por canal `chrome` exige Chrome 144+ e Playwright 1.62+.
-4. Deixe o EnglishCentral aberto e entre na sua conta normalmente.
-5. Execute `windows\INICIAR_PC.bat`. Na primeira execução, o Studio cria o ambiente virtual e instala as dependências do `requirements.txt`. Mantenha a janela aberta.
-6. No mesmo computador e no mesmo Chrome, abra https://englishcentral-studio.onrender.com.
-7. Clique em **Já estou conectado no Chrome**. Quando o Chrome pedir permissão para o site acessar o loopback/rede local, permita.
-8. Marque **Quero permitir que este assistente controle a sessão do meu Chrome** e clique em **Conectar meu Chrome**. O Playwright chama `connect_over_cdp('chrome', no_defaults=True)` e seleciona uma aba existente.
+1. Windows 10/11 e Python 3.10 ou superior instalado com **Add Python to PATH**.
+2. Google Chrome 144 ou superior.
+3. Acesso à internet na primeira execução para instalar as dependências Playwright.
 
-## O que é realmente executado
+## Instalação e conexão
 
-- `INICIAR_PC.bat` inicia o servidor FastAPI original no próprio PC, limitado a `127.0.0.1:8765`.
-- `/api/bridge/bootstrap` só entrega o token à origem HTTPS oficial, através de uma conexão local.
-- O token fica em memória no painel; não vai para URL, localStorage ou sessionStorage.
-- `/api/browser/connect` conecta por CDP ao Chrome já aberto.
-- As operações e capturas seguem do navegador para o conector local; não usam um Chrome simulado no Render.
-- Cada computador executa sua própria ponte e usa seu próprio login. O Render não consegue acessar o Chrome de um PC desligado ou sem o conector ativo.
+1. Extraia o ZIP inteiro para uma pasta. Não execute o BAT de dentro da visualização do ZIP.
+2. Abra o Chrome e entre no EnglishCentral/SEDUCTEC normalmente.
+3. Na mesma janela do Chrome, abra \`chrome://inspect/#remote-debugging\` e habilite **Allow remote debugging for this browser instance**.
+4. Volte à pasta extraída e execute \`windows\\INICIAR_PC.bat\`.
+5. Aguarde o ambiente Python e o Playwright serem preparados. Mantenha a janela preta aberta; ela é o servidor local do seu PC.
+6. No mesmo computador, abra https://englishcentral-studio.onrender.com.
+7. Clique em **Já estou conectado no Chrome**, marque a autorização de controle e depois clique em **Conectar meu Chrome**.
+8. Permita o acesso à rede local/loopback quando o Chrome solicitar. O painel então chama o conector local; o backend conecta por CDP ao Chrome existente.
 
-## Encerrar
+## Como confirmar uma conexão real
 
-Pause o assistente no painel e pressione `Ctrl+C` na janela do conector. As abas do Chrome continuam abertas.
+A conexão só é considerada concluída quando o backend termina \`playwright.chromium.connect_over_cdp(...)\`, encontra o contexto/aba e devolve a mensagem **Chrome/Edge conectado. A aba e o login existentes foram reutilizados.** Em seguida, a prévia deve mostrar uma captura do conteúdo real do Chrome. Se a conexão falhar, o painel mostra o tipo e o início do erro real do Playwright; não altera o estado para conectado.
 
-A ligação final com sua conta real deve ser autorizada no Chrome do Windows; não é possível confirmar remotamente o consentimento ou o estado da sessão do computador.
+O backend usa a assinatura Python compatível \`connect_over_cdp(endpoint, timeout=25000)\`. Não passa \`no_defaults\`, que não é um argumento da API Python.
+
+## Privacidade e encerramento
+
+- O token local é entregue somente à origem HTTPS oficial, em uma chamada de loopback.
+- O token permanece na memória da página; não é inserido em URL, \`localStorage\` ou \`sessionStorage\`.
+- Senhas, cookies e abas permanecem no Chrome deste computador.
+- Para encerrar, pause o assistente e pressione \`Ctrl+C\` na janela do conector. O Studio desconecta o Playwright sem fechar o Chrome pessoal.
+
+Cada computador precisa executar seu próprio conector. O Render não pode acessar um Chrome que esteja em outro PC, desligado ou sem o conector ativo.

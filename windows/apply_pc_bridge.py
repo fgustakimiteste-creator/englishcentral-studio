@@ -1,4 +1,4 @@
-"""Apply the real Windows-to-hosted-panel bridge to the untouched V18.13.3 source."""
+"""Apply the authenticated Windows-to-hosted-panel bridge to original V18.13.3 source."""
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -63,6 +63,14 @@ def main() -> None:
         "                    media_type='application/json',\n"
         "                    headers={'Cache-Control': 'no-store, max-age=0', 'Pragma': 'no-cache', 'Vary': 'Origin'})\n\n\n"
         "def require_auth(x_ec_token: str | None = Header(default=None)):\n")
+    # Playwright Python rejects the no_defaults keyword on connect_over_cdp.
+    replace_once(root / "servidor.py",
+        "connect_over_cdp(endpoint,timeout=25000,no_defaults=True)",
+        "connect_over_cdp(endpoint,timeout=25000)")
+    old_error = "raise HTTPException(409,TERMUX_CHROME_HELP if TERMUX else 'Não consegui conectar ao Chrome/Edge aberto. No Chrome 144 ou superior, abra chrome://inspect/#remote-debugging, habilite a conexão e aceite a solicitação no próprio Chrome. O assistente não abriu outro perfil.') from exc"
+    new_error = "raise HTTPException(409,TERMUX_CHROME_HELP if TERMUX else ('Não consegui conectar ao Chrome/Edge aberto. No Chrome 144 ou superior, abra chrome://inspect/#remote-debugging, habilite a conexão e aceite a solicitação no próprio Chrome. Detalhe real: '+type(exc).__name__+': '+((str(exc).strip().splitlines() or [''])[0][:220]))) from exc"
+    replace_once(root / "servidor.py", old_error, new_error)
+
     replace_once(root / "mobile_app.py",
         "        expected = self.config.origin if self.config.enabled and not local else str(request.base_url).rstrip('/')\n",
         "        bridge_origin = os.getenv('EC_LOCAL_PANEL_ORIGIN', 'https://englishcentral-studio.onrender.com').strip().rstrip('/')\n"
@@ -84,7 +92,10 @@ def main() -> None:
     import py_compile
     for relative in ("servidor.py", "mobile_app.py", "iniciar.py"):
         py_compile.compile(str(root / relative), doraise=True)
-    print("Ponte Windows real aplicada e verificada. Abra INICIAR_PC.bat.")
+    source = (root / "servidor.py").read_text(encoding="utf-8")
+    if "connect_over_cdp(endpoint,timeout=25000,no_defaults=True)" in source:
+        raise SystemExit("O argumento incompatível no_defaults=True permaneceu.")
+    print("Ponte local aplicada; conexão Playwright CDP corrigida e compilada. Abra INICIAR_PC.bat.")
 
 if __name__ == "__main__":
     main()

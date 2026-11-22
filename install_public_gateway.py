@@ -275,3 +275,79 @@ replace_once('web/index.html',
 ''',
 '''if(!publicSession&&location.hash.startsWith('#token=')){try{token=decodeURIComponent(location.hash.substring(7));storeAccess();history.replaceState(null,'',location.pathname+location.search)}catch{}}
 ''')
+
+
+# The Chrome button must not disappear in a Render-hosted panel. It opens a
+# truthful guide to the required on-device Termux bridge; the Render process
+# cannot reach Android localhost directly.
+page = ROOT / 'web' / 'index.html'
+html = page.read_text(encoding='utf-8')
+hidden_rule = "for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=remoteMode;"
+if hidden_rule in html:
+    html = html.replace(hidden_rule, "for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=false;", 1)
+elif "for(const id of ['connectChrome','emptyConnectChrome'])$(id).hidden=false;" not in html:
+    raise SystemExit('Could not find Chrome connect button visibility rule')
+
+# Identify the dialog elements so the mobile/Render guidance can be changed safely.
+html = html.replace(
+    '<p class="note">O assistente pode reutilizar uma aba do EnglishCentral ou do SEDUCTEC já aberta no seu Chrome, sem copiar senhas ou cookies para outro perfil.</p>',
+    '<p id="browserDialogIntro" class="note">O assistente pode reutilizar uma aba do EnglishCentral ou do SEDUCTEC já aberta no seu Chrome, sem copiar senhas ou cookies para outro perfil.</p>',
+    1
+)
+html = html.replace(
+    '<ol class="browserSteps">',
+    '<ol id="browserSteps" class="browserSteps">',
+    1
+)
+html = html.replace(
+    '<button id="submitBrowserConnect" class="btn primary" type="submit">Conectar meu Chrome</button>',
+    '<button id="submitBrowserConnect" class="btn primary" type="submit">Conectar meu Chrome</button><a id="localStudioLink" class="btn" href="http://127.0.0.1:8765/" target="_blank" rel="noopener" hidden>Abrir Studio local</a><a id="termuxPackageLink" class="btn" href="https://github.com/fgustakimiteste-creator/englishcentral-studio/raw/refs/heads/main/EnglishCentral-Studio-18.13.3-G0DMOD3.zip" target="_blank" rel="noopener" hidden>Baixar pacote Termux</a>',
+    1
+)
+
+old_help_prefix = "text('browserSessionHelp',remoteMode?"
+lines = html.splitlines(keepends=True)
+for index, line in enumerate(lines):
+    if old_help_prefix in line:
+        indent = line[:len(line) - len(line.lstrip())]
+        lines[index] = indent + "text('browserSessionHelp',remoteMode?'Para conectar o Chrome deste Android, abra o Studio localmente pelo Termux. O site do Render não consegue acessar o Chrome/localhost do seu aparelho. Veja as instruções em “Usar meu Chrome já aberto”.':'Seu Chrome usa as contas já conectadas nele. Para contas simultâneas independentes, use uma pessoa e uma sessão do assistente para cada conta.');\n"
+        break
+else:
+    raise SystemExit('Could not find browserSessionHelp runtime line')
+html = ''.join(lines)
+
+old_function = "function showBrowserConnect(){text('browserConnectMessage','');$('browserConsent').checked=false;$('browserDialog').showModal()}"
+new_function = r'''function showBrowserConnect(){
+ text('browserConnectMessage','');
+ $('browserConsent').checked=false;
+ $('submitBrowserConnect').hidden=remoteMode;
+ $('localStudioLink').hidden=!remoteMode;
+ $('termuxPackageLink').hidden=!remoteMode;
+ const steps=$('browserSteps');steps.replaceChildren();
+ if(remoteMode){
+  text('browserDialogTitle','Conectar o Chrome deste Android');
+  text('browserDialogIntro','Este painel está hospedado no Render. Por segurança, um servidor na nuvem não consegue acessar diretamente o Chrome instalado no seu celular. Para reaproveitar o login do Chrome, o motor do Studio precisa rodar no próprio Android.');
+  const items=[
+   'Baixe o pacote completo do Studio e extraia a pasta EnglishCentral-Studio no armazenamento do celular.',
+   'Abra o Termux e instale as ferramentas: pkg update -y && pkg install python nodejs-lts android-tools unzip -y.',
+   'No Android, ative Opções do desenvolvedor → Depuração sem fio → Parear dispositivo com código. No Termux, execute adb pair IP:PORTA e informe o código mostrado no Android; depois execute adb connect IP:PORTA usando o endereço/porta principal exibidos na tela de Depuração sem fio.',
+   'Com o Chrome aberto no curso, no Termux execute: adb forward tcp:9222 localabstract:chrome_devtools_remote.',
+   'No Termux, entre na pasta EnglishCentral-Studio e execute bash TERMUX_INICIAR.sh. Depois abra http://127.0.0.1:8765 no Edge deste mesmo celular e conecte o Chrome por esse painel local.'
+  ];
+  for(const value of items){const li=document.createElement('li');li.textContent=value;steps.append(li)}
+ }else{
+  text('browserDialogTitle','Usar o Chrome já aberto');
+  text('browserDialogIntro','O assistente pode reutilizar uma aba do EnglishCentral ou do SEDUCTEC já aberta no seu Chrome, sem copiar senhas ou cookies para outro perfil.');
+  const items=[
+   'No Chrome 144 ou superior, abra chrome://inspect/#remote-debugging e habilite a conexão.',
+   'Abra o curso no mesmo Chrome e faça o login diretamente no site.',
+   'Clique em Conectar e aceite a solicitação que o próprio Chrome mostrar.'
+  ];
+  for(const value of items){const li=document.createElement('li');li.textContent=value;steps.append(li)}
+ }
+ $('browserDialog').showModal()
+}'''
+if old_function not in html:
+    raise SystemExit('Could not find the browser connect dialog function')
+html = html.replace(old_function, new_function, 1)
+page.write_text(html, encoding='utf-8')

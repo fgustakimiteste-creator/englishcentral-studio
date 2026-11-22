@@ -21,9 +21,12 @@ RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
     && cp -a /tmp/unpacked/EnglishCentral-Studio/. /app/ \
     && rm -rf /tmp/unpacked /tmp/englishcentral.zip
 
-# Only the public-session gateway is layered on top of the original application.
+# Server-side isolation for each public visitor.
 COPY install_public_gateway.py /tmp/install_public_gateway.py
+# Browser-side bridge: hosted UI uses the local Windows connector only after explicit approval.
+COPY enable_pc_bridge_cloud.py /tmp/enable_pc_bridge_cloud.py
 RUN EC_SOURCE_ROOT=/app python /tmp/install_public_gateway.py \
+    && EC_SOURCE_ROOT=/app python /tmp/enable_pc_bridge_cloud.py \
     && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py
 
 WORKDIR /app

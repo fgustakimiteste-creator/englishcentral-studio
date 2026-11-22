@@ -16,6 +16,19 @@ RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
     && cp -a /tmp/unpacked/EnglishCentral-Studio/. /app/ \
     && rm -rf /tmp/unpacked /tmp/englishcentral.zip
 
+# Keep the private panel token in this device's local storage by default.
+# The token itself is still supplied once through the private #token= link.
+RUN python - <<'PY'
+from pathlib import Path
+p = Path("/app/web/index.html")
+s = p.read_text(encoding="utf-8")
+old = "try{$('rememberAccess').checked=localStorage.getItem(rememberKey)==='true';token=sessionStorage.getItem(tokenKey)||($('rememberAccess').checked?localStorage.getItem(tokenKey):'')||''}catch{}"
+new = "try{$('rememberAccess').checked=true;localStorage.setItem(rememberKey,'true');token=sessionStorage.getItem(tokenKey)||localStorage.getItem(tokenKey)||''}catch{}"
+if old not in s:
+    raise SystemExit("Could not find the expected remember-access initialization in web/index.html")
+p.write_text(s.replace(old, new, 1), encoding="utf-8")
+PY
+
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \
     && python -m playwright install --with-deps chromium \

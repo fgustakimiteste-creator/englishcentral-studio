@@ -20,7 +20,8 @@ COPY enable_public_sessions.py /tmp/enable_public_sessions.py
 COPY fix_public_ui.py /tmp/fix_public_ui.py
 COPY fix_public_home.py /tmp/fix_public_home.py
 COPY fix_request_import.py /tmp/fix_request_import.py
-RUN python /tmp/enable_public_sessions.py && python /tmp/fix_public_ui.py && python /tmp/fix_public_home.py && python /tmp/fix_request_import.py
+COPY debug_public_auth.py /tmp/debug_public_auth.py
+RUN python /tmp/enable_public_sessions.py && python /tmp/fix_public_ui.py && python /tmp/fix_public_home.py && python /tmp/fix_request_import.py && python /tmp/debug_public_auth.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \

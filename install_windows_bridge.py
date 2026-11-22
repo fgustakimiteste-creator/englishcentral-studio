@@ -137,6 +137,7 @@ def patch_mobile_boundary(root: Path) -> None:
 def patch_launcher(root: Path) -> None:
     p = root / "iniciar.py"
     old = """        print(f'Painel aberto em http://127.0.0.1:{PORT}', flush=True)
+        print('Para encerrar, feche esta janela ou pressione Ctrl+C.', flush=True)
         webbrowser.open(url)
 """
     new = """        if os.getenv('EC_PC_BRIDGE', '0') == '1':
@@ -146,6 +147,7 @@ def patch_launcher(root: Path) -> None:
         else:
             print(f'Painel aberto em http://127.0.0.1:{PORT}', flush=True)
             webbrowser.open(url)
+        print('Para encerrar, pressione Ctrl+C.', flush=True)
 """
     replace_once(p, old, new, "iniciador sem abrir a UI local")
     old_browser = "    if not _installed_browser():\n        print('[2/3] Preparando Chromium para o Playwright...', flush=True)\n        command(PY, '-m', 'playwright', 'install', 'chromium')\n"

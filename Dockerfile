@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
     EC_HEADLESS=1
 
 WORKDIR /tmp/build
-RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY EnglishCentral-Studio-18.13.3-G0DMOD3.zip /tmp/englishcentral.zip

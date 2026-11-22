@@ -18,7 +18,8 @@ RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
 
 COPY enable_public_sessions.py /tmp/enable_public_sessions.py
 COPY fix_public_ui.py /tmp/fix_public_ui.py
-RUN python /tmp/enable_public_sessions.py && python /tmp/fix_public_ui.py
+COPY fix_public_home.py /tmp/fix_public_home.py
+RUN python /tmp/enable_public_sessions.py && python /tmp/fix_public_ui.py && python /tmp/fix_public_home.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \

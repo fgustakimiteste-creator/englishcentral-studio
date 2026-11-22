@@ -351,3 +351,14 @@ if old_function not in html:
     raise SystemExit('Could not find the browser connect dialog function')
 html = html.replace(old_function, new_function, 1)
 page.write_text(html, encoding='utf-8')
+
+
+# Do not submit a cloud-side CDP request: it can only address localhost inside
+# the Render container, never the visitor's Android. Keep the explanation in the UI.
+replace_once('web/index.html',
+''' event.preventDefault();if(!$('browserConsent').checked)return;
+''',
+''' event.preventDefault();
+ if(remoteMode){text('browserConnectMessage','O painel do Render não alcança o Chrome deste celular. Abra o Studio local pelo Termux usando as instruções acima; a conexão CDP é feita localmente, sem enviar seu login ao servidor.');return}
+ if(!$('browserConsent').checked)return;
+''')

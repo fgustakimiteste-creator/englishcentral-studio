@@ -1,6 +1,6 @@
 # EnglishCentral Studio V18.13.5
 
-O Render extrai o ZIP completo `EnglishCentral-Studio-18.13.5-G0DMOD3.zip` sem redesenhar a interface nem substituir os módulos originais. O único ajuste de hospedagem é a ativação automática da sessão privada do painel.
+
 
 ## Acesso privado automático
 

@@ -123,7 +123,7 @@ def public_profile_manager(project_root: Path, session_id: str):
         if public_sessions:
             if not session_id:
                 if request.method in {'GET', 'HEAD'} and path == '':
-                    return Response(status_code=303, headers={'Location': '/'})
+                    return Response(status_code=303, headers={{'Location': '/'}})
                 raise HTTPException(401, 'Sessão privada ausente ou expirada. Abra o endereço principal novamente.')
             if path == 'api/session/logout' and request.method == 'POST':
                 response = Response(status_code=204)

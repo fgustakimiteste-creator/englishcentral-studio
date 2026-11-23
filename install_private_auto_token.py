@@ -39,13 +39,6 @@ def patch_mobile(root: Path) -> None:
         if imports_old not in source:
             raise SystemExit("Imports do mobile_app.py mudaram; patch interrompido para preservar o arquivo.")
         source = source.replace(imports_old, imports_new, 1)
-    response_import = "from fastapi.responses import FileResponse, JSONResponse, Response\\n"
-    response_import_new = "from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response\\n"
-    if response_import_new not in source:
-        if response_import not in source:
-            raise SystemExit("Import de respostas FastAPI não encontrado.")
-        source = source.replace(response_import, response_import_new, 1)
-
     marker = "PROFILE_ID = re.compile(r'principal|pessoa(?:[2-9]|[1-9]\\d+)')\n"
     helper = marker + f'''PUBLIC_COOKIE = "{COOKIE_NAME}"
 PUBLIC_SESSION_ID = re.compile(r"[a-f0-9]{{32}}")
@@ -130,7 +123,7 @@ def public_profile_manager(project_root: Path, session_id: str):
         if public_sessions:
             if not session_id:
                 if request.method in {'GET', 'HEAD'} and path == '':
-                    return RedirectResponse('/', status_code=303)
+                    return Response(status_code=303, headers={'Location': '/'})
                 raise HTTPException(401, 'Sessão privada ausente ou expirada. Abra o endereço principal novamente.')
             if path == 'api/session/logout' and request.method == 'POST':
                 response = Response(status_code=204)

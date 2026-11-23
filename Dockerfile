@@ -12,18 +12,16 @@ WORKDIR /tmp/build
 RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Use the latest full project ZIP already present in this repository.
+# Extract the exact V18.13.5 project. The source archive and SKILL.md remain untouched.
 COPY EnglishCentral-Studio-18.13.5-G0DMOD3.zip /tmp/englishcentral.zip
 RUN mkdir -p /app && unzip -q /tmp/englishcentral.zip -d /tmp/unpacked \
     && cp -a /tmp/unpacked/EnglishCentral-Studio/. /app/ \
     && rm -rf /tmp/unpacked /tmp/englishcentral.zip
 
-# Preserve the existing Windows/Chrome connector, then add only private auto-session auth.
-COPY install_windows_bridge.py /tmp/install_windows_bridge.py
+# Only the automatic private-session/token patch is applied to the original project.
 COPY install_private_auto_token.py /tmp/install_private_auto_token.py
-RUN EC_SOURCE_ROOT=/app python /tmp/install_windows_bridge.py \
-    && EC_SOURCE_ROOT=/app python /tmp/install_private_auto_token.py \
-    && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py /app/iniciar.py
+RUN EC_SOURCE_ROOT=/app python /tmp/install_private_auto_token.py \
+    && python -m py_compile /app/servidor.py /app/mobile_app.py /app/perfis.py
 
 WORKDIR /app
 RUN pip install --no-cache-dir -r requirements.txt \

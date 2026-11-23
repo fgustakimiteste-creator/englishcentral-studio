@@ -17,7 +17,7 @@ import uuid
 from pathlib import Path
 
 COOKIE_NAME = "ec_private_session"
-SESSION_MAX_AGE = 30 * 24 * 60 * 60
+SESSION_MAX_AGE = 365 * 24 * 60 * 60
 
 
 def replace_once(path: Path, old: str, new: str, label: str) -> None:
@@ -39,6 +39,12 @@ def patch_mobile(root: Path) -> None:
         if imports_old not in source:
             raise SystemExit("Imports do mobile_app.py mudaram; patch interrompido para preservar o arquivo.")
         source = source.replace(imports_old, imports_new, 1)
+    response_import = "from fastapi.responses import FileResponse, JSONResponse, Response\\n"
+    response_import_new = "from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response\\n"
+    if response_import_new not in source:
+        if response_import not in source:
+            raise SystemExit("Import de respostas FastAPI não encontrado.")
+        source = source.replace(response_import, response_import_new, 1)
 
     marker = "PROFILE_ID = re.compile(r'principal|pessoa(?:[2-9]|[1-9]\\d+)')\n"
     helper = marker + f'''PUBLIC_COOKIE = "{COOKIE_NAME}"
@@ -123,6 +129,8 @@ def public_profile_manager(project_root: Path, session_id: str):
         session_id = read_public_session_id(request) if public_sessions else None
         if public_sessions:
             if not session_id:
+                if request.method in {'GET', 'HEAD'} and path == '':
+                    return RedirectResponse('/', status_code=303)
                 raise HTTPException(401, 'Sessão privada ausente ou expirada. Abra o endereço principal novamente.')
             if path == 'api/session/logout' and request.method == 'POST':
                 response = Response(status_code=204)
@@ -244,7 +252,11 @@ async def home(request: Request):
             return response
         manager = public_profile_manager(ROOT, session_id)
         await asyncio.to_thread(manager.list)
-        return RedirectResponse('/p/principal/', status_code=303)
+        response = RedirectResponse('/p/principal/', status_code=303)
+        response.set_cookie(PUBLIC_COOKIE, make_public_session_cookie(session_id),
+                            max_age=SESSION_MAX_AGE, httponly=True, secure=True,
+                            samesite='lax', path='/')
+        return response
     return FileResponse(ROOT / 'web' / 'index.html', media_type='text/html', headers={{'Cache-Control': 'no-store'}})
 """
     replace_once(path, old_home, new_home, "inicialização automática da sessão privada")
@@ -343,6 +355,36 @@ def patch_frontend(root: Path) -> None:
     forget_marker = "$('forgetDevice').onclick=()=>{"
     forget_new = "$('forgetDevice').onclick=async()=>{if(publicSession){await logoutPrivateSession();return}"
     once(forget_marker, forget_new, "botão Esquecer acesso")
+
+    # In public-session mode, the HttpOnly cookie is the only browser credential.
+    # The per-profile bearer token stays inside the gateway and local worker.
+    old_api = """  const resp=await fetch(panelBase+'api/'+path,{method,headers:{'X-EC-Token':token,...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,cache:'no-store',...(controller?{signal:controller.signal}:{})});
+"""
+    new_api = """  const headers={...(publicSession?{}:{'X-EC-Token':token}),...(data?{'Content-Type':'application/json'}:{})};
+  const resp=await fetch(panelBase+'api/'+path,{method,credentials:'same-origin',headers,body:data?JSON.stringify(data):undefined,cache:'no-store',...(controller?{signal:controller.signal}:{})});
+"""
+    once(old_api, new_api, "API autenticada pelo cookie sem enviar bearer token")
+
+    old_lane = "fetch(panelBase+'api/moodle/automation/lanes/'+encodeURIComponent(lane.id)+'/screenshot',{headers:{'X-EC-Token':token},cache:'no-store'})"
+    new_lane = "fetch(panelBase+'api/moodle/automation/lanes/'+encodeURIComponent(lane.id)+'/screenshot',{credentials:'same-origin',headers:publicSession?{}:{'X-EC-Token':token},cache:'no-store'})"
+    if new_lane not in s:
+        if old_lane not in s: raise SystemExit("Screenshot dos agentes não encontrado.")
+        s=s.replace(old_lane,new_lane,1)
+    old_screen = "fetch(panelBase+'api/screenshot',{cache:'no-store',headers:{'X-EC-Token':token},signal:controller.signal})"
+    new_screen = "fetch(panelBase+'api/screenshot',{credentials:'same-origin',cache:'no-store',headers:publicSession?{}:{'X-EC-Token':token},signal:controller.signal})"
+    if new_screen not in s:
+        if old_screen not in s: raise SystemExit("Screenshot principal não encontrado.")
+        s=s.replace(old_screen,new_screen,1)
+
+    # Remove obsolete panel tokens saved by earlier builds on this browser.
+    marker = "if(publicSession)token='public-session-cookie';"
+    cleanup = """if(publicSession){
+    token='public-session-cookie';
+    try{for(const storage of [localStorage,sessionStorage]){for(const key of Object.keys(storage)){if(key==='ec_token'||key==='ec_remember:/'||key.startsWith('ec_token:')||key.startsWith('ec_remember:'))storage.removeItem(key)}}}catch{}
+}"""
+    if cleanup not in s:
+        if marker not in s: raise SystemExit("Estado inicial da sessão pública não encontrado.")
+        s=s.replace(marker,cleanup,1)
 
     path.write_text(s, encoding="utf-8")
 

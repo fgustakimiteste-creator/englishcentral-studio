@@ -123,7 +123,15 @@ def public_profile_manager(project_root: Path, session_id: str):
         if public_sessions:
             if not session_id:
                 if request.method in {'GET', 'HEAD'} and path == '':
-                    return Response(status_code=303, headers={{'Location': '/'}})
+                    session_id = create_public_session_id()
+                    manager = public_profile_manager(root, session_id)
+                    await asyncio.to_thread(manager.list)
+                    response = FileResponse(root / 'web' / 'index.html', media_type='text/html',
+                                             headers={{'Cache-Control': 'no-store'}})
+                    response.set_cookie(PUBLIC_COOKIE, make_public_session_cookie(session_id),
+                                        max_age=PUBLIC_SESSION_MAX_AGE, httponly=True, secure=True,
+                                        samesite='lax', path='/')
+                    return response
                 raise HTTPException(401, 'Sessão privada ausente ou expirada. Abra o endereço principal novamente.')
             if path == 'api/session/logout' and request.method == 'POST':
                 response = Response(status_code=204)

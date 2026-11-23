@@ -402,7 +402,7 @@ def main() -> None:
         "signed HttpOnly cookie route": "async def home(request: Request)" in server and "set_cookie(PUBLIC_COOKIE" in server,
         "server-side private token injection": "token_painel.txt" in mobile and "X-EC-Token" in mobile,
         "per-profile isolated tenant": "public_sessions" in mobile and "EC_PUBLIC_SESSION_ID" in profiles,
-        "browser bearer token removed": "if(publicSession)token='public-session-cookie';" in html and ("if(!publicSession)token=sessionStorage" in html or "if(!publicSession&&!hostedBridgePage)token=sessionStorage" in html),
+        "browser bearer token removed": "if(publicSession){" in html and "token='public-session-cookie';" in html and ("if(!publicSession)token=sessionStorage" in html or "if(!publicSession&&!hostedBridgePage)token=sessionStorage" in html),
         "no token hash in public session": "if(!publicSession" in html and "location.hash.startsWith('#token=')" in html,
     }
     for label, ok in checks.items():

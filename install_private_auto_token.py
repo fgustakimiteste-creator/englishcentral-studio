@@ -247,7 +247,7 @@ async def home(request: Request):
         await asyncio.to_thread(manager.list)
         response = RedirectResponse('/p/principal/', status_code=303)
         response.set_cookie(PUBLIC_COOKIE, make_public_session_cookie(session_id),
-                            max_age=SESSION_MAX_AGE, httponly=True, secure=True,
+                            max_age={SESSION_MAX_AGE}, httponly=True, secure=True,
                             samesite='lax', path='/')
         return response
     return FileResponse(ROOT / 'web' / 'index.html', media_type='text/html', headers={{'Cache-Control': 'no-store'}})
